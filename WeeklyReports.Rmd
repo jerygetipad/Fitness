@@ -1,0 +1,139 @@
+---
+title: "Weekly Reports"
+author: "Ben Gramza"
+output:
+  pdf_document: default
+  html_document: default
+params:
+  week: 1
+---
+
+### Week `r params$week` Report
+```{r Initialization, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+# Read in Libraries
+library(tidyverse)
+library(knitr)
+library(flextable)
+
+# Suppress Font Error in Flextable 
+set_flextable_defaults(fonts_ignore=TRUE)
+# Load Functions
+source("ProcessData.R")
+source("DetectRecord.R")
+source("WeightOverTime.R")
+# Notes/Todo: 
+# Write Errors To tmplog, then rename log at end of script
+
+# Process Data
+process_data()
+```
+
+
+```{r Data Processing, include=FALSE}
+# Read in Data
+fitness <- read_csv("./Data/Master.csv", show_col_types = FALSE)
+
+# Filter out max week
+fitness <- fitness |> 
+  filter(week <= params$week)
+# Grab Exercises Performed The Latest Day
+exercise_list <- unique(
+  fitness |> 
+    filter(week==params$week) |> 
+    select(exercise)) |>
+  unlist()
+
+```
+
+
+```{r Report 1a, echo=FALSE, ft.align="left"}
+#' Report 1. Daily Summary  
+#' Exercise Group A  
+fitness |> 
+  filter(week==params$week) |>
+  filter(type == "rotation A") |>
+  select(exercise, session, w1, w2, w3, w4, w5) |>
+  flextable(
+    col_keys = c("exercise","session","col1","w1","w2","w3","w4","w5")
+  ) |> 
+  width(j = "col1", width = .2) |>
+  empty_blanks() |>
+  add_header_row(
+    colwidths = c(1, 1, 1, 5),
+    values = c(" ", " ", " ", "Weights (in lbs.) / Reps if Bodyweight")
+  ) |>
+  add_header_lines(
+   values = c(
+     "Exercise Group A1"
+  )) |>
+  align(i = 2, part = "header", align = "center") |>
+  labelizor(
+    part = "header", 
+    labels = c(
+      "exercise"="Exercise",
+      "session"="Session",
+      "w1"="Set 1",
+      "w2"="Set 2",
+      "w3"="Set 3",
+      "w4"="Set 4",
+      "w5"="Set 5")
+    ) |>
+  fix_border_issues() |>
+  autofit()
+```
+
+```{r Report 1b, echo=FALSE, ft.align="left"}
+# B1
+fitness |> 
+  filter(week==params$week) |>
+  filter(type == "rotation B") |>
+  select(exercise, session, w1, w2, w3) |>
+  flextable(
+    col_keys = c("exercise","session","col1","w1","w2","w3")
+  ) |> 
+  width(j = "col1", width = .2) |>
+  empty_blanks() |>
+  add_header_row(
+    colwidths = c(1, 1, 1, 3),
+    values = c(" "," ", " ","Weights (in lbs.) / Reps if Bodyweight")
+  ) |>
+  add_header_lines(
+    values = c(
+      "Exercise Group B1"
+    )) |>
+  align(i = 2, part = "header", align = "center") |>
+  labelizor(
+    part = "header", 
+    labels = c(
+      "exercise"="Exercise",
+      "session"="Session",
+      "w1"="Set 1",
+      "w2"="Set 2",
+      "w3"="Set 3"
+  )) |>
+  fix_border_issues() |>
+  autofit() 
+
+```
+\newpage
+### Report 2. New Personal Records 
+```{r Report 2}
+#' Report 2. New Personal Records
+detect_record(fitness,exercise_list)
+```
+  
+### Report 3. Weight over Time
+```{r, echo=FALSE, fig.height=11, message=FALSE, warning=FALSE}
+weighted_exercises <- fitness |>
+  filter(week==params$week) |>
+  filter(!(exercise %in% c("Back Extensions", "Incline Push Ups", "Chin Ups"))) |>
+  filter(!is.na(w1)) |> 
+  select(exercise) |>
+  unique() |>
+  unlist() 
+
+weight_over_time_v2(weighted_exercises)
+```
+
